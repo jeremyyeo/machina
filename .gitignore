@@ -41,6 +41,7 @@ Temporary Items
 
 # User-specific files
 .Ruserdata
+/rsconnect
 
 # Example code in package build process
 *-Ex.R
