@@ -1,0 +1,44 @@
+@import url("https://fonts.googleapis.com/css?family=Lobster|Cabin:400,700");
+
+body {
+  font-family: 'Lobster' !important;
+}
+
+*, h1, h2, h3, h4, h5, h6 {
+  font-family: Roboto-Regular;
+}
+
+.skin-blue .main-header .logo {
+  background-color: #434C5E;
+}
+
+.skin-blue .main-header .logo:hover {
+  background-color: #2E344033;
+}
+
+.skin-blue .main-header .navbar {
+  background-color: #4C566A;
+}
+
+.skin-blue .main-header .navbar .sidebar-toggle:hover {
+  background-color: #2E344033;
+}
+
+.box-primary .box-header {
+  background: #13B5EA !important;
+  background-color: #13B5EA !important;
+}
+
+.box-primary {
+  border: 1px solid #13B5EA !important;
+}
+
+#analyse, #forecast {
+  background-color: #5E81AC;
+  color: white;
+}
+
+#analyse:hover, #forecast:hover {
+  background-color: #81A1C1;
+  color: white;
+}
