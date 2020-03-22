@@ -1,12 +1,9 @@
 library(shinydashboard)
-library(bigrquery)
 library(lubridate)
-library(plotly)
 library(dygraphs)
 library(dplyr)
 library(reshape2)
 library(prophet)
-library(gtrendsR)
 library(CausalImpact)
 library(quantmod)
 library(gridExtra)
@@ -39,18 +36,6 @@ ui <- dashboardPage(
         ),
         options = list(create = TRUE, maxItems = 1)
       ),
-      # selectInput(
-      #   "symbols",
-      #   label = p("Demo data (stock prices)"),
-      #   choices = list(
-      #     "Xero (XRO.AX)" = "XRO.AX",
-      #     "Intuit (INTU)" = "INTU",
-      #     "Alphabet (GOOG)" = "GOOG",
-      #     "Apple (AAPL)" = "AAPL"
-      #   ),
-      #   selected = NULL,
-      #   multiple = F
-      # ),
       actionButton("fetch_symbols", label = "Load demo data"),
       hr()
     )
@@ -88,8 +73,11 @@ ui <- dashboardPage(
                 tabPanel(
                   "Causality",
                   fluidRow(
-                    box(width = 8, solidHeader = T, plotOutput("causality_plot")),
-                    box(width = 4, solidHeader = T, textOutput("causality_report"))
+                    box(width = 12, solidHeader = T, dygraphOutput("causality_plot"))
+                  ),
+                  fluidRow(
+                    box(width = 9, solidHeader = T, textOutput("causality_report")),
+                    box(width = 3, solidHeader = T, valueBoxOutput("causality_significance", width = NULL))
                   )
                 ),
                 tabPanel(
@@ -357,8 +345,13 @@ server <- function(input, output, session) {
     x
   })
   
-  output$causality_plot <- renderPlot({
-    plot(causal_impact())
+  output$causality_plot <- renderDygraph({
+    req(causal_impact())
+    dygraph(causal_impact()$series[, c("response", "point.pred", "point.pred.lower", "point.pred.upper")]) %>%
+      dySeries("response", label = "Actual", color = "#5E81AC") %>%
+      dySeries(c("point.pred.lower", "point.pred", "point.pred.upper"), label = "Prediction", color = "#BF616A") %>%
+      dyShading(from = input$causality_intervention_date, to = post_period()[2]) %>%
+      dyRangeSelector()
   })
   
   output$causality_report <- renderText({
@@ -374,6 +367,19 @@ server <- function(input, output, session) {
     dygraph(selected_data) %>% 
       dyShading(from = input$causality_intervention_date, to = post_period()[2]) %>%
       dyRangeSelector()
+  })
+  
+  output$causality_significance <- renderValueBox({
+    req(causal_impact())
+    p_val <- max(causal_impact()$summary$p)
+    icon_name  <- ifelse(p_val <= 0.05, "thumbs-up", "thumbs-down")
+    color_name <- ifelse(p_val <= 0.05, "green", "red")
+    valueBox(
+      paste0(round((1 - p_val) * 100, 2), "%"),
+      "Probability of a causal effect",
+      icon = icon(icon_name, lib = "glyphicon"),
+      color = color_name
+    )
   })
 
 }
