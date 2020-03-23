@@ -1,4 +1,4 @@
-# instrumentum-analytica
+# machina
 
 A set of analytics tools built with R using the following packages:
 

@@ -9,7 +9,7 @@ library(quantmod)
 library(gridExtra)
 
 dashboard_header <- dashboardHeader(
-  title = "Instrumentum Analytica",
+  title = "Machina",
   tags$li(a(href = "https://www.picturatechnica.com", target = "_blank", img(src = "logo.png", title = "Logo", height = "30px"), style = "padding-top:10px; padding-bottom:10px;"), class = "dropdown"),
   titleWidth = 250
 )
@@ -31,8 +31,9 @@ ui <- dashboardPage(
         label = p("Demo data (Yahoo Finance)"),
         choices = list(
           "Xero (XRO.AX)" = "XRO.AX",
-          "Intuit (INTU)" = "INTU",
-          "Alphabet (GOOG)" = "GOOG"
+          "Alphabet (GOOG)" = "GOOG",
+          "Facebook (FB)" = "FB",
+          "Tesla (TSLA)" = "TSLA"
         ),
         options = list(create = TRUE, maxItems = 1)
       ),
@@ -61,7 +62,9 @@ ui <- dashboardPage(
               hr(),
               helpText("An assumption of causal inference is that we assume that there is a set of control time series that were themselves not affected by the intervention."),
               hr(),
-              tagList(p("Download a sample dataset: "), a("Beer Stock Prices", href = "https://gist.github.com/jeremyyeo/e4dcc3dd148428784e689546d151afbc", target = "_blank"))
+              tagList(p("Download a sample dataset:"), a("Beer Stock Prices", href = "https://gist.github.com/jeremyyeo/e4dcc3dd148428784e689546d151afbc", target = "_blank")),
+              hr(),
+             tagList(p("Library documentation:"), tags$a(href = "https://google.github.io/CausalImpact/", "CausalImpact (Google)")),
             ),
             uiOutput("causality_inputs")
           ),
@@ -101,6 +104,8 @@ ui <- dashboardPage(
               title = "Help",
               solidHeader = T, collapsible = T,  width = NULL,
               helpText("Your data set needs to have at least a date column (in the format of YYYY-MM-DD) and a value to forecast."),
+              hr(),
+              tagList(p("Library documentation:"), tags$a(href = "https://facebook.github.io/prophet/", "Prophet (Facebook)")),
             ),
             uiOutput("forecast_inputs")
           ),
@@ -216,7 +221,8 @@ server <- function(input, output, session) {
       numericInput(
         "forecasting_periods",
         label = h4("How many periods ahead to forecast?"),
-        value = 365
+        value = 30,
+        max = 365
       )
     )
   })
@@ -243,11 +249,16 @@ server <- function(input, output, session) {
     })
     x
   })
-
-  output$chart <- renderDygraph({
+  
+  future <- eventReactive(input$forecast, {
     req(m())
+    make_future_dataframe(m(), periods = input$forecasting_periods)
+  })
+  
+  output$chart <- renderDygraph({
+    req(future())
     withProgress(message = "Forecasting...", value = 0.5, {
-      future   <- make_future_dataframe(m(), periods = input$forecasting_periods)
+      future   <- future()
       incProgress(0.25)
       values$forecast <- predict(m(), future)
       incProgress(0.25)
@@ -256,7 +267,7 @@ server <- function(input, output, session) {
   })
 
   output$chart_components <- renderPlot({
-    req(m())
+    req(future())
     all_plots <- prophet_plot_components(m(), values$forecast)
     grid.arrange(grobs = all_plots, ncol = 2)
   })
