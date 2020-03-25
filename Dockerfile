@@ -26,6 +26,7 @@ RUN R -e "install.packages('CausalImpact', repos='http://cran.rstudio.com/')"
 
 # Copy shiny app files
 COPY app.R /srv/shiny-server/
+COPY /data/load-beer-stocks.R /srv/shiny-server/data/
 COPY www /srv/shiny-server/www
 
 # Speed up prophet library by doing intial stan model compilation.

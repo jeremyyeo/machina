@@ -14,113 +14,142 @@ dashboard_header <- dashboardHeader(
   titleWidth = 250
 )
 
-ui <- dashboardPage(
-  skin = "blue",
-  dashboard_header,
-  dashboardSidebar(
-    width = 250,
-    sidebarMenu(
-      menuItem("Data Preview", tabName = "home", icon = icon("table")),
-      menuItem("Forecast", tabName = "forecast", icon = icon("cloud")),
-      menuItem("Causality", tabName = "causality", icon = icon("lightbulb")),
-      menuItemOutput("selectable_data_sets"),
-      hr(),
-      menuItemOutput("menuitem"),
-      selectizeInput(
-        "symbols_2",
-        label = p("Demo data (Yahoo Finance)"),
-        choices = list(
-          "Xero (XRO.AX)" = "XRO.AX",
-          "Alphabet (GOOG)" = "GOOG",
-          "Facebook (FB)" = "FB",
-          "Tesla (TSLA)" = "TSLA"
-        ),
-        options = list(create = TRUE, maxItems = 1)
-      ),
-      actionButton("fetch_symbols", label = "Load demo data"),
-      hr()
-    )
-  ),
-  dashboardBody(
-    tags$head(
-      tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")),
-    tabItems(
-      tabItem(
-        "home",
-        h3("Data Preview"),
-        DT::DTOutput("data_set")
-      ),
-      tabItem(
-        "causality",
-        fluidRow(
-          column(
-            width = 2,
-            box(
-              title = "Help",
-              solidHeader = T, collapsible = T,  width = NULL,
-              helpText("To support your experimental time series (the one with intervention), also select one or more control time series."),
-              hr(),
-              helpText("An assumption of causal inference is that we assume that there is a set of control time series that were themselves not affected by the intervention."),
-              hr(),
-              tagList(p("Download a sample dataset:"), a("Beer Stock Prices", href = "https://gist.github.com/jeremyyeo/e4dcc3dd148428784e689546d151afbc", target = "_blank")),
-              hr(),
-             tagList(p("Library documentation:"), tags$a(href = "https://google.github.io/CausalImpact/", "CausalImpact (Google)")),
-            ),
-            uiOutput("causality_inputs")
+ui <- function(request) {
+  dashboardPage(
+    skin = "blue",
+    dashboard_header,
+    dashboardSidebar(
+      width = 250,
+      sidebarMenu(
+        id = "sidebar",
+        menuItem("Data Preview", tabName = "home", icon = icon("table")),
+        menuItem("Forecast", tabName = "forecast", icon = icon("cloud")),
+        menuItem("Causality", tabName = "causality", icon = icon("lightbulb")),
+        menuItemOutput("selectable_data_sets"),
+        menuItemOutput("menuitem"),
+        selectizeInput(
+          "symbols_2",
+          label = p("Yahoo Finance Symbols"),
+          choices = list(
+            "Xero (XRO.AX)" = "XRO.AX",
+            "Alphabet (GOOG)" = "GOOG",
+            "Facebook (FB)" = "FB",
+            "Tesla (TSLA)" = "TSLA"
           ),
-          column(
-            width = 10,
-              tabBox(
+          options = list(create = TRUE, maxItems = 1)
+        ),
+        actionButton("fetch_symbols", label = "Load Data"),
+        hr(),
+        bookmarkButton(label = "Bookmark Results"),
+        menuItem("Source Code", icon = icon("file-code-o"), href = "https://github.com/jeremyyeo/machina")
+      )
+    ),
+    dashboardBody(
+      tags$head(
+        tags$link(rel = "stylesheet", type = "text/css", href = "custom.css"),
+        includeScript("www/ga.js")
+      ),
+      tabItems(
+        tabItem(
+          "home",
+          fluidRow(
+            column(
+              width = 12,
+              box(
                 width = NULL,
-                height = NULL,
-                tabPanel(
-                  "Causality",
-                  fluidRow(
-                    box(width = 12, solidHeader = T, dygraphOutput("causality_plot"))
+                solidHeader = T,
+                status = "primary",
+                title = "Data Preview",
+                span(textOutput("on_load_help"), style = "color:#BF616A"),
+                DT::DTOutput("data_set")
+              )
+            )
+          )
+        ),
+        tabItem(
+          "causality",
+          fluidRow(
+            column(
+              width = 2,
+              box(
+                title = "Help",
+                solidHeader = T, collapsible = T,  width = NULL,
+                helpText("To support your experimental time series (the one with intervention), also select one or more control time series."),
+                hr(),
+                helpText("An assumption of causal inference is that we assume that there is a set of control time series that were themselves not affected by the intervention."),
+                hr(),
+                tagList(p("Library documentation:"), tags$a(href = "https://google.github.io/CausalImpact/", "CausalImpact (Google)")),
+                hr(),
+                tagList(
+                  tags$p("Load the", code("BUD, RI.PA, HEINY"), "stock price sample data, select", code("2020-01-01"), "as the 'Start date of intervention' and", code("RI.PA"), "and", code("HEINY"), "as the controls."),
+                  a("Data documentation", href = "https://gist.github.com/jeremyyeo/e4dcc3dd148428784e689546d151afbc", target = "_blank")
+                )
+              ),
+              actionButton("load", label = h4("Load Sample Data"), width = "100%"),
+              uiOutput("causality_inputs")
+            ),
+            column(
+              width = 10,
+                tabBox(
+                  width = NULL,
+                  height = NULL,
+                  tabPanel(
+                    "Causality",
+                    fluidRow(
+                      box(width = 12, solidHeader = T, dygraphOutput("causality_plot"))
+                    ),
+                    fluidRow(
+                      box(width = 9, solidHeader = T, textOutput("causality_report")),
+                      box(width = 3, solidHeader = T, valueBoxOutput("causality_significance", width = NULL))
+                    )
                   ),
-                  fluidRow(
-                    box(width = 9, solidHeader = T, textOutput("causality_report")),
-                    box(width = 3, solidHeader = T, valueBoxOutput("causality_significance", width = NULL))
-                  )
-                ),
-                tabPanel(
-                  "Preview selected time series",
-                  box(
-                    solidHeader = T,
-                    dygraphOutput("causality_preview"),
-                    width = NULL
+                  tabPanel(
+                    "Preview selected time series",
+                    box(
+                      solidHeader = T,
+                      dygraphOutput("causality_preview"),
+                      width = NULL
+                    )
                   )
                 )
-              )
+            )
           )
-        )
-      ),
-      tabItem(
-        "forecast",
-        fluidRow(
-          column(
-            width = 2,
-            box(
-              title = "Help",
-              solidHeader = T, collapsible = T,  width = NULL,
-              helpText("Your data set needs to have at least a date column (in the format of YYYY-MM-DD) and a value to forecast."),
-              hr(),
-              tagList(p("Library documentation:"), tags$a(href = "https://facebook.github.io/prophet/", "Prophet (Facebook)")),
+        ),
+        tabItem(
+          "forecast",
+          fluidRow(
+            column(
+              width = 2,
+              box(
+                title = "Help",
+                solidHeader = T, collapsible = T,  width = NULL,
+                helpText("Your data set needs to have at least a date column (in the format of YYYY-MM-DD) and a value to forecast."),
+                hr(),
+                tagList(p("Library documentation:"), tags$a(href = "https://facebook.github.io/prophet/", "Prophet (Facebook)")),
+              ),
+              uiOutput("forecast_inputs")
             ),
-            uiOutput("forecast_inputs")
-          ),
-          column(
-            width = 10,
-            box(dygraphOutput("chart"), width = NULL),
-            box(plotOutput("chart_components"), width = NULL)
+            column(
+              width = 10,
+              box(dygraphOutput("chart"), width = NULL),
+              box(plotOutput("chart_components"), width = NULL)
+            )
           )
         )
       )
     )
   )
-)
-
+}
 server <- function(input, output, session) {
+  output$on_load_help <- renderText({
+    if (identical(names(reactive_data), character(0))) {
+      "Upload a CSV or load some data..."
+    } else {
+      NULL
+    }
+  })
+  
+  
   output$menuitem <- renderMenu({
     fileInput(
       "file1", "Choose CSV File",
@@ -132,6 +161,15 @@ server <- function(input, output, session) {
   reactive_data <- reactiveValues()
   values <- reactiveValues()
   
+  observeEvent(input$load, {
+    withProgress(message = "Downloading...", value = 0.5, {
+      source("data/load-beer-stocks.R", local = TRUE)
+      incProgress(0.5)
+    })
+    reactive_data[["BUD, RI.PA, HEINY"]] <- all_xts
+    removeUI("#load")
+  })
+  
   observeEvent(input$file1, {
     in_file <- input$file1
     if (is.null(in_file)) {
@@ -141,7 +179,15 @@ server <- function(input, output, session) {
       reactive_data[[as.character(in_file$name)]] <- data.frame(user_uploaded_csv)
     }
   })
-
+  
+  observeEvent(input$symbols_2, {
+    updateActionButton(
+      session,
+      "fetch_symbols",
+      label = paste0("Load ", input$symbols_2, " data")
+    )
+  })
+  
   observeEvent(input$fetch_symbols, {
     withProgress(message = "Downloading...", value = 0.5, {
       data_symbols <- getSymbols(input$symbols_2, auto.assign = F)
@@ -163,7 +209,7 @@ server <- function(input, output, session) {
     } else {
       selectInput(
         "selected_data_set",
-        label = p("Main data set"),
+        label = p("Selected Data"),
         choices = names(reactive_data),
         multiple = F,
         selected = NULL
@@ -273,12 +319,12 @@ server <- function(input, output, session) {
   })
 
   # Causality components ----
-
+  
   output$causality_inputs <- renderUI({
     req(input$selected_data_set)
     field_names <- colnames(data_input())
     tagList(
-      actionButton("analyse", label = h4("Analyse intervention"), width = "100%"),
+      actionButton("analyse", label = h4("Analyse Intervention"), width = "100%"),
       selectInput(
         "causality_date_field",
         label = h4("Date column"),
@@ -395,4 +441,4 @@ server <- function(input, output, session) {
 
 }
 
-shinyApp(ui, server)
+shinyApp(ui, server, enableBookmarking = "server")
