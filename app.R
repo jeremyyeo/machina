@@ -160,6 +160,7 @@ server <- function(input, output, session) {
 
   reactive_data <- reactiveValues()
   values <- reactiveValues()
+  values$selectedControls <- NULL
   
   observeEvent(input$load, {
     withProgress(message = "Downloading...", value = 0.5, {
@@ -273,7 +274,7 @@ server <- function(input, output, session) {
     )
   })
 
-  observe({
+  observeEvent(input$date_field, {
     selected_date_field <- input$date_field
     selectable_value_fields <- colnames(data_input())[!(colnames(data_input()) %in% selected_date_field)]
     if (!is.null(selected_date_field)) {
@@ -353,7 +354,7 @@ server <- function(input, output, session) {
     )
   })
 
-  observe({
+  observeEvent(input$causality_date_field, {
     selected_date_field <- input$causality_date_field
     selectable_value_fields <- colnames(data_input())[!(colnames(data_input()) %in% selected_date_field)]
     if (!is.null(selected_date_field)) {
@@ -365,15 +366,24 @@ server <- function(input, output, session) {
     }
   })
 
-  observe({
+  observeEvent(input$causality_experiment_field, {
     selected_meta_fields <- c(input$causality_date_field, input$causality_experiment_field)
     selectable_value_fields <- colnames(data_input())[!(colnames(data_input()) %in% selected_meta_fields)]
     if (!is.null(selected_meta_fields)) {
-      updateSelectInput(
-        session,
-        "causality_controls_field",
-        choices = selectable_value_fields
-      )
+      if (!is.null(values$selectedControls)) {
+        updateSelectInput(
+          session,
+          "causality_controls_field",
+          choices = selectable_value_fields,
+          selected = values$selectedControls
+        )
+      } else {
+        updateSelectInput(
+          session,
+          "causality_controls_field",
+          choices = selectable_value_fields
+        )
+      }
     }
   })
   
@@ -386,7 +396,7 @@ server <- function(input, output, session) {
   })
   
   causal_impact <- eventReactive(input$analyse, {
-    withProgress(message = "Sciencing...", value = 0.5, {
+    withProgress(message = "Analysing...", value = 0.5, {
       selected_data <- data_input() %>%
         rename(date = input$causality_date_field) %>%
         dplyr::select(c(date, input$causality_experiment_field, input$causality_controls_field))
@@ -428,6 +438,7 @@ server <- function(input, output, session) {
   
   output$causality_significance <- renderValueBox({
     req(causal_impact())
+    values$sessionIsBookmarked <- F
     p_val <- max(causal_impact()$summary$p)
     icon_name  <- ifelse(p_val <= 0.05, "thumbs-up", "thumbs-down")
     color_name <- ifelse(p_val <= 0.05, "green", "red")
@@ -438,7 +449,15 @@ server <- function(input, output, session) {
       color = color_name
     )
   })
-
+ 
+  onBookmark(function(state) {
+    state$values$selectedControls <- input$causality_controls_field
+  })
+  
+  onRestore(function(state) {
+    values$selectedControls <- state$values$selectedControls
+  })
+  
 }
 
 shinyApp(ui, server, enableBookmarking = "server")
