@@ -176,8 +176,10 @@ server <- function(input, output, session) {
     if (is.null(in_file)) {
       return(NULL)
     } else {
-      user_uploaded_csv <- read.csv(in_file$datapath)
-      reactive_data[[as.character(in_file$name)]] <- data.frame(user_uploaded_csv)
+      user_uploaded_csv  <- read.csv(in_file$datapath)
+      uploaded_df        <- data.frame(user_uploaded_csv)
+      names(uploaded_df) <- tolower(names(uploaded_df))
+      reactive_data[[as.character(in_file$name)]] <- uploaded_df
     }
   })
   
